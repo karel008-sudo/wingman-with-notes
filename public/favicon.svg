@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#c026d3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App background -->
+  <rect width="512" height="512" rx="110" fill="#0f0f16"/>
+
+  <!-- Glow behind wings -->
+  <ellipse cx="256" cy="268" rx="140" ry="48" fill="#7c3aed" opacity="0.12"/>
+
+  <!-- LEFT WING — 3 feather layers -->
+  <!-- feather 3 (outermost, lightest) -->
+  <path d="M250 248 C228 232 188 204 148 190 C116 178 92 184 78 198
+           C92 206 116 205 146 212 C176 219 220 240 248 260 Z"
+        fill="url(#g1)" opacity="0.55"/>
+  <!-- feather 2 -->
+  <path d="M252 258 C234 246 196 222 158 210 C124 200 100 206 86 220
+           C100 228 124 226 156 232 C188 238 232 256 250 272 Z"
+        fill="url(#g1)" opacity="0.75"/>
+  <!-- feather 1 (innermost) -->
+  <path d="M254 270 C240 262 208 248 172 240 C144 234 122 238 108 250
+           C122 258 144 256 174 260 C204 264 240 274 252 284 Z"
+        fill="url(#g1)" opacity="1"/>
+
+  <!-- RIGHT WING — mirror -->
+  <path d="M262 248 C284 232 324 204 364 190 C396 178 420 184 434 198
+           C420 206 396 205 366 212 C336 219 292 240 264 260 Z"
+        fill="url(#g1)" opacity="0.55"/>
+  <path d="M260 258 C278 246 316 222 354 210 C388 200 412 206 426 220
+           C412 228 388 226 356 232 C324 238 280 256 262 272 Z"
+        fill="url(#g1)" opacity="0.75"/>
+  <path d="M258 270 C272 262 304 248 340 240 C368 234 390 238 404 250
+           C390 258 368 256 338 260 C308 264 272 274 260 284 Z"
+        fill="url(#g1)" opacity="1"/>
+
+  <!-- Center badge ring -->
+  <circle cx="256" cy="262" r="28" fill="url(#g2)"/>
+  <circle cx="256" cy="262" r="18" fill="#0f0f16"/>
+
+  <!-- Center star -->
+  <polygon points="256,248 259,258 270,258 261,264 264,275 256,269 248,275 251,264 242,258 253,258"
+           fill="#c084fc"/>
+</svg>

@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* === Design Tokens ===
+   Background:    #0b0b11
+   Surface:       rgba(255,255,255,0.04)
+   Surface+:      #1a1a26
+   Border:        rgba(255,255,255,0.07)
+   Border+:       rgba(255,255,255,0.10)
+   Primary:       #8b5cf6
+   Primary grad:  linear-gradient(135deg, #7c3aed, #9333ea)
+   Accent cyan:   #22d3ee
+   Accent amber:  #f59e0b
+   Success:       #10b981
+   Danger:        #f43f5e
+   Text-1:        #f8f8ff   — headings, primary content
+   Text-2:        #d4d4d8   — body text
+   Text-3:        #71717a   — labels, secondary
+   Text-4:        #52525b   — muted, meta
+   Text-5:        #3f3f46   — section labels, disabled
+   ======================================================= */
+
+* { -webkit-tap-highlight-color: transparent; }
+body { overscroll-behavior: none; background: #0b0b11; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+/* Prevent iOS Safari from auto-zooming when inputs are focused.
+   iOS zooms in whenever an input's font-size is below 16px.
+   This rule ensures all inputs render at ≥16px — the visual size
+   is still controlled by Tailwind utilities via the style prop. */
+input, select, textarea { font-size: 16px !important; }
+
+/* Global focus ring for all interactive inputs */
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139,92,246,0.4);
+  border-color: rgba(139,92,246,0.5) !important;
+}
+
+/* Smooth press feel for primary CTAs */
+.btn-primary:active { transform: scale(0.97); }
+
+@keyframes setSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.set-enter { animation: setSlideIn 0.18s ease-out; }
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast-enter { animation: toastSlideUp 0.2s ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.2s ease-out; }
