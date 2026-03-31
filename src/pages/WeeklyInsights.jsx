@@ -240,13 +240,12 @@ export default function WeeklyInsights({ onBack }) {
                         Best {week.isCurrent ? '🔥' : ''}
                       </span>
                     )}
-                    {week.days === 0 ? (
-                      <span className="text-xs" style={{ color: '#3f3f46' }}>rest</span>
-                    ) : (
-                      <span className="text-xs" style={{ color: '#52525b' }}>
-                        {week.days} {week.days === 1 ? 'day' : 'days'}
-                      </span>
-                    )}
+                    {(() => {
+                      const d = week.days.filter(d => d.has).length
+                      return d === 0
+                        ? <span className="text-xs" style={{ color: '#3f3f46' }}>rest</span>
+                        : <span className="text-xs" style={{ color: '#52525b' }}>{d} {d === 1 ? 'day' : 'days'}</span>
+                    })()}
                   </div>
                 </div>
 
