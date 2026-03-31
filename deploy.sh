@@ -2,20 +2,36 @@
 set -e
 cd "$(dirname "$0")"
 
+# Load secrets from local file (gitignored)
+if [ -f .deploy-secrets ]; then
+  source .deploy-secrets
+fi
+
+if [ -z "$GH_TOKEN" ]; then
+  echo "Error: GH_TOKEN not set. Create .deploy-secrets with GH_TOKEN=..."
+  exit 1
+fi
+
 echo "Building..."
 npm run build
 
-echo "Deploying to Netlify..."
-SITE_ID="b588a256-0346-4ec0-9d1d-dfcadf17acd7"
-TOKEN="nfp_Xie5BbzZfVrEdCcwq6Bm2Zj9djcV9JS101b6"
+echo "Deploying to GitHub Pages..."
 
-cd dist && zip -r /tmp/gym-diary-dist.zip . -x "*.DS_Store" && cd ..
+DEPLOY_DIR=$(mktemp -d)
+cp -r dist/. "$DEPLOY_DIR/"
+cd "$DEPLOY_DIR"
 
-RESULT=$(curl -s -X POST "https://api.netlify.com/api/v1/sites/$SITE_ID/deploys" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/zip" \
-  --data-binary @/tmp/gym-diary-dist.zip)
+git init -q
+git config user.email "karel@wingman.app"
+git config user.name "Karel"
+git checkout -b gh-pages
+git add -A
+git commit -m "Deploy" -q
+git remote add origin "https://$GH_TOKEN@github.com/karel008-sudo/wingman-with-notes.git" 2>/dev/null || \
+  git remote set-url origin "https://$GH_TOKEN@github.com/karel008-sudo/wingman-with-notes.git"
+git push origin gh-pages --force -q
 
-URL=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ssl_url') or d.get('url','?'))" 2>/dev/null)
-echo "✅ Hotovo: https://gym-diary-kp.netlify.app"
-rm /tmp/gym-diary-dist.zip
+cd "$(dirname "$0")"
+rm -rf "$DEPLOY_DIR"
+
+echo "✅ Hotovo: https://karel008-sudo.github.io/wingman-with-notes/"

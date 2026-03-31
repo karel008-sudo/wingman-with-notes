@@ -11,7 +11,7 @@ initLogger(db)
 // Register SW manually with updateViaCache: 'none' so iOS always fetches
 // the latest sw.js without relying on HTTP cache headers
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+  navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js', { updateViaCache: 'none' })
     .then(reg => {
       reg.update() // force check on every app load
       logger.info('sw', 'Service worker registered', { scope: reg.scope })
