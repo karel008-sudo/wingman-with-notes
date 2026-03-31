@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useRegisterSW } from 'virtual:pwa-register/react'
 import Dashboard from './pages/Dashboard'
 import Log from './pages/Log'
 import History from './pages/History'
@@ -80,7 +79,6 @@ export default function App() {
   const [tab, setTab] = useState('dashboard')
   const [subView, setSubView] = useState(null)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
-  useRegisterSW()
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
