@@ -264,12 +264,26 @@ function WorkoutDayCard({ date, workouts, allSets, allExercises, onDeleted }) {
   }
   const catEntries = Object.entries(catSets).sort((a, b) => b[1] - a[1])
 
-  // Top exercises by set count (max 4 shown)
-  const exSetCount = {}
-  for (const s of daySets) exSetCount[s.exerciseId] = (exSetCount[s.exerciseId] || 0) + 1
-  const topExIds = Object.entries(exSetCount).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => Number(id))
-  const topExNames = topExIds.map(id => ({ name: exMap[id]?.name, cat: exMap[id]?.category })).filter(e => e.name)
-  const hiddenCount = exerciseIds.length - topExIds.length
+  // Group sets per exercise, sorted by setNumber
+  const exSetsMap = {}
+  for (const s of daySets) {
+    if (!exSetsMap[s.exerciseId]) exSetsMap[s.exerciseId] = []
+    exSetsMap[s.exerciseId].push(s)
+  }
+  for (const eid in exSetsMap) exSetsMap[eid].sort((a, b) => a.setNumber - b.setNumber)
+
+  // All exercises sorted by set count (most worked first)
+  const exerciseList = exerciseIds
+    .map(eid => ({
+      eid: Number(eid),
+      name: exMap[eid]?.name,
+      category: exMap[eid]?.category,
+      sets: exSetsMap[eid] || [],
+    }))
+    .filter(e => e.name)
+    .sort((a, b) => b.sets.length - a.sets.length)
+
+  const maxCatSets = Math.max(...catEntries.map(([, c]) => c), 1)
 
   const dayType = getDayType(catSets, totalSets)
   const dayTypeStyle = getDayTypeStyle(dayType)
@@ -319,50 +333,45 @@ function WorkoutDayCard({ date, workouts, allSets, allExercises, onDeleted }) {
           )}
         </div>
 
-        {/* Row 3: exercise chips */}
-        {topExNames.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {topExNames.map(({ name, cat }) => {
-              const c = CAT_COLORS[cat] || '#a1a1aa'
+        {/* Exercise list — all exercises with sets */}
+        {exerciseList.length > 0 && (
+          <div className="space-y-2 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            {exerciseList.map(ex => {
+              const c = CAT_COLORS[ex.category] || '#a1a1aa'
               return (
-                <span key={name} className="text-xs px-2.5 py-1 rounded-full"
-                  style={{ background: `${c}15`, color: c, border: `1px solid ${c}28` }}>
-                  {name}
-                </span>
+                <div key={ex.eid}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c }} />
+                    <span className="text-xs font-semibold" style={{ color: '#d4d4d8' }}>{ex.name}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 pl-3">
+                    {ex.sets.map((s, i) => (
+                      <span key={i} className="text-xs" style={{ color: '#52525b' }}>
+                        {s.weight}<span style={{ color: '#3f3f46' }}>×</span>{s.reps}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )
             })}
-            {hiddenCount > 0 && (
-              <span className="text-xs px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.05)', color: '#52525b' }}>
-                +{hiddenCount}
-              </span>
-            )}
           </div>
         )}
 
-        {/* Row 4: muscle group bar + labels */}
-        {catEntries.length > 0 && totalSets > 0 && (
-          <div className="space-y-1.5">
-            {/* Segmented bar */}
-            <div className="flex rounded-full overflow-hidden" style={{ height: 6 }}>
-              {catEntries.map(([cat, count]) => (
-                <div key={cat} style={{ width: `${(count / totalSets) * 100}%`, background: CAT_COLORS[cat] || '#a1a1aa' }} />
-              ))}
-            </div>
-            {/* Top 3 category labels */}
-            <div className="flex items-center gap-3 flex-wrap">
-              {catEntries.slice(0, 3).map(([cat, count]) => (
-                <div key={cat} className="flex items-center gap-1">
-                  <div className="rounded-full shrink-0" style={{ width: 6, height: 6, background: CAT_COLORS[cat] || '#a1a1aa' }} />
-                  <span className="text-xs" style={{ color: '#71717a' }}>
-                    {cat} <span style={{ color: '#52525b' }}>{Math.round((count / totalSets) * 100)}%</span>
-                  </span>
+        {/* Category breakdown — horizontal bars, no % */}
+        {catEntries.length > 0 && (
+          <div className="space-y-1 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            {catEntries.map(([cat, count]) => (
+              <div key={cat} className="flex items-center gap-2">
+                <span className="text-xs w-16 shrink-0" style={{ color: '#52525b' }}>{cat}</span>
+                <div className="flex-1 rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,0.06)' }}>
+                  <div className="h-full rounded-full" style={{
+                    width: `${(count / maxCatSets) * 100}%`,
+                    background: CAT_COLORS[cat] || '#a1a1aa',
+                  }} />
                 </div>
-              ))}
-              {catEntries.length > 3 && (
-                <span className="text-xs" style={{ color: '#3f3f46' }}>+{catEntries.length - 3} more</span>
-              )}
-            </div>
+                <span className="text-xs w-8 text-right shrink-0" style={{ color: CAT_COLORS[cat] || '#a1a1aa' }}>{Math.round((count / totalSets) * 100)}%</span>
+              </div>
+            ))}
           </div>
         )}
       </div>

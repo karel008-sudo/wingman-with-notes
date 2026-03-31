@@ -119,7 +119,7 @@ export default function WeeklyInsights({ onBack }) {
   const activeWeeks    = allWeeks.filter(w => w.count > 0)
   const bestWeek       = allWeeks.reduce((b, w) => w.volume > (b?.volume || 0) ? w : b, null)
   const maxVolume      = Math.max(...allWeeks.map(w => w.volume), 1)
-  const avgSessions    = (allWorkouts.length / allWeeks.length).toFixed(1)
+  const avgSessions    = (sortedDates.length / allWeeks.length).toFixed(1)
   const last4Active    = activeWeeks.slice(0, 4)
   const avgLast4Vol    = last4Active.length ? Math.round(last4Active.reduce((s, w) => s + w.volume, 0) / last4Active.length) : 0
   const consistency    = Math.round((activeWeeks.length / allWeeks.length) * 100)
@@ -139,7 +139,7 @@ export default function WeeklyInsights({ onBack }) {
   const insightRows = [
     { label: 'Best week', value: bestWeek ? `${formatBigNumber(bestWeek.volume)} kg` : '—', sub: bestWeek?.label },
     { label: 'Avg volume (last 4)', value: `${formatBigNumber(avgLast4Vol)} kg`, sub: 'per active week' },
-    { label: 'Avg sessions', value: `${avgSessions} / week`, sub: `over ${allWeeks.length} wks` },
+    { label: 'Avg days / wk', value: `${avgSessions}`, sub: `over ${allWeeks.length} weeks` },
     { label: 'Consistency', value: `${consistency}%`, sub: 'weeks with training' },
   ]
 
@@ -194,7 +194,7 @@ export default function WeeklyInsights({ onBack }) {
         <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#3f3f46' }}>Avg / week</div>
           <div className="text-3xl font-bold" style={{ color: '#f59e0b' }}>{avgSessions}</div>
-          <div className="text-xs mt-0.5" style={{ color: '#52525b' }}>sessions</div>
+          <div className="text-xs mt-0.5" style={{ color: '#52525b' }}>days/wk</div>
         </div>
       </div>
 
@@ -240,11 +240,11 @@ export default function WeeklyInsights({ onBack }) {
                         Best {week.isCurrent ? '🔥' : ''}
                       </span>
                     )}
-                    {week.count === 0 ? (
+                    {week.days === 0 ? (
                       <span className="text-xs" style={{ color: '#3f3f46' }}>rest</span>
                     ) : (
                       <span className="text-xs" style={{ color: '#52525b' }}>
-                        {week.count} {week.count === 1 ? 'session' : 'sessions'}
+                        {week.days} {week.days === 1 ? 'day' : 'days'}
                       </span>
                     )}
                   </div>

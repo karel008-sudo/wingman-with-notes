@@ -20,7 +20,25 @@
    ======================================================= */
 
 * { -webkit-tap-highlight-color: transparent; }
-body { overscroll-behavior: none; background: #0b0b11; }
+html { background: #000; }
+body { overscroll-behavior: none; background: #0b0b11; min-height: 100%; }
+
+/* iOS safe-area fix: extend nav background behind the home indicator */
+.app-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+.app-nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: env(safe-area-inset-bottom, 0px);
+  background: rgba(0, 0, 0, 0.90);
+}
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
 

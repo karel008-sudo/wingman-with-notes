@@ -30,6 +30,7 @@ const CATEGORY_COLORS = {
 
 export default function Exercises({ onOpenLogs }) {
   const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray(), [], [])
+  const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [category, setCategory] = useState(CATEGORIES[0])
@@ -76,7 +77,11 @@ export default function Exercises({ onOpenLogs }) {
     setDeleteTarget(null)
   }
 
-  const grouped = exercises?.reduce((acc, e) => {
+  const filtered = search.trim()
+    ? exercises?.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
+    : exercises
+
+  const grouped = filtered?.reduce((acc, e) => {
     const cat = e.category ?? 'Other'
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(e)
@@ -104,6 +109,31 @@ export default function Exercises({ onOpenLogs }) {
           Add
         </button>
       </div>
+
+      {/* Search */}
+      {!showForm && exercises.length > 0 && (
+        <div className="relative">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#3f3f46' }}>
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search exercises..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#f8f8ff' }}
+            onFocus={e => { e.target.style.borderColor = 'rgba(139,92,246,0.5)'; e.target.style.boxShadow = '0 0 0 2px rgba(139,92,246,0.2)' }}
+            onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.07)'; e.target.style.boxShadow = 'none' }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-lg leading-none"
+              style={{ color: '#52525b' }}>×</button>
+          )}
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -238,6 +268,14 @@ export default function Exercises({ onOpenLogs }) {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* No results */}
+      {search.trim() && filtered?.length === 0 && (
+        <div className="rounded-2xl p-8 text-center" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.07)' }}>
+          <div className="font-semibold text-sm" style={{ color: '#d4d4d8' }}>No exercises found</div>
+          <div className="text-xs mt-1" style={{ color: '#52525b' }}>Try a different search term</div>
         </div>
       )}
 

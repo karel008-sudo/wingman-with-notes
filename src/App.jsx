@@ -103,7 +103,8 @@ export default function App() {
         height: '100dvh',
       }}
     >
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex-1 overflow-y-auto overscroll-contain"
+        style={{ paddingBottom: 'calc(58px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Safe-area spacer — pushes content below the Dynamic Island / notch / status bar */}
         <div style={{ height: 'env(safe-area-inset-top, 44px)', minHeight: 44 }} />
 {!isOnline && (
@@ -156,13 +157,14 @@ export default function App() {
       )}
 
       <nav
-        className="flex"
+        className="app-nav flex"
         style={{
-          background: 'rgba(0,0,0,0.80)',
+          background: 'rgba(0,0,0,0.90)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          zIndex: 40,
         }}
       >
         {TABS.map(t => {

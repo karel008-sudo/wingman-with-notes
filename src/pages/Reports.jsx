@@ -79,6 +79,10 @@ function ChartCard({ title, subtitle, latestValue, latestUnit, data, dataKey }) 
               }}
               labelStyle={{ color: '#71717a' }}
               itemStyle={{ color: '#c084fc' }}
+              formatter={(value) => [
+                latestUnit ? `${value.toLocaleString('en-US')} ${latestUnit}` : value,
+                title,
+              ]}
             />
             <Line
               type="monotone"

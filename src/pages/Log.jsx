@@ -100,7 +100,7 @@ function SetRow({ set, onChange, onDelete, isNew, prThreshold }) {
           value={set.reps}
           onChange={e => onChange({ ...set, reps: Number(e.target.value) || DEFAULT_REPS })}
           onBlur={() => setEditingReps(false)}
-          className="w-12 rounded-xl px-2 py-2.5 text-center text-sm outline-none"
+          className="w-16 rounded-xl px-2 py-2.5 text-center text-base outline-none"
           style={{
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(139,92,246,0.5)',
@@ -111,11 +111,11 @@ function SetRow({ set, onChange, onDelete, isNew, prThreshold }) {
       ) : (
         <button
           onClick={() => setEditingReps(true)}
-          className="w-12 py-2.5 rounded-xl text-sm text-center transition-colors font-medium"
+          className="w-16 py-2.5 rounded-xl text-base text-center transition-colors font-semibold"
           style={
             set.reps !== DEFAULT_REPS
               ? { background: 'rgba(139,92,246,0.2)', color: '#c4b5fd' }
-              : { background: 'rgba(255,255,255,0.04)', color: '#71717a' }
+              : { background: 'rgba(255,255,255,0.06)', color: '#d4d4d8' }
           }
         >
           {set.reps}
@@ -124,10 +124,10 @@ function SetRow({ set, onChange, onDelete, isNew, prThreshold }) {
 
       <button
         onClick={onDelete}
-        className="shrink-0 text-xl leading-none text-center transition-colors flex items-center justify-center rounded-lg -mr-2"
-        style={{ color: '#71717a', width: 36, minHeight: 36 }}
+        className="shrink-0 text-xl leading-none text-center transition-colors flex items-center justify-center rounded-lg"
+        style={{ color: '#52525b', width: 32, minHeight: 36 }}
         onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
-        onMouseLeave={e => e.currentTarget.style.color = '#71717a'}
+        onMouseLeave={e => e.currentTarget.style.color = '#52525b'}
       >
         ×
       </button>
@@ -251,8 +251,8 @@ function ExerciseBlock({ entry, exercises, onRemove, onSetsChange }) {
         <span className="flex-1 text-xs text-center" style={{ color: '#3f3f46' }}>WEIGHT</span>
         <span className="w-4" />
         <span className="w-4" />
-        <span className="w-12 text-xs text-center" style={{ color: '#3f3f46' }}>REPS</span>
-        <span className="w-7" />
+        <span className="w-16 text-xs text-center" style={{ color: '#3f3f46' }}>REPS</span>
+        <span className="w-8" />
       </div>
 
       {sets.map((set, idx) => (
@@ -323,9 +323,34 @@ export default function Log() {
     const exerciseIds = [...new Set(allSets.map(s => s.exerciseId))]
     const exList = await db.exercises.where('id').anyOf(exerciseIds).toArray()
     const exMap = Object.fromEntries(exList.map(e => [e.id, e]))
+
     const totalVolume = allSets.reduce((sum, s) => sum + s.weight * s.reps, 0)
-    const exerciseNames = exerciseIds.map(eid => exMap[eid]?.name).filter(Boolean)
-    return { totalVolume, exerciseNames }
+    const totalSets   = allSets.length
+
+    // Per-exercise stats
+    const exStats = {}
+    for (const s of allSets) {
+      if (!exStats[s.exerciseId]) exStats[s.exerciseId] = { setCount: 0, maxWeight: 0 }
+      exStats[s.exerciseId].setCount++
+      if (s.weight > exStats[s.exerciseId].maxWeight) exStats[s.exerciseId].maxWeight = s.weight
+    }
+    const exercises = exerciseIds
+      .map(eid => ({
+        name:      exMap[eid]?.name,
+        category:  exMap[eid]?.category,
+        setCount:  exStats[eid]?.setCount || 0,
+        maxWeight: exStats[eid]?.maxWeight || 0,
+      }))
+      .filter(e => e.name)
+
+    // Category breakdown by set count
+    const catSets = {}
+    for (const s of allSets) {
+      const cat = exMap[s.exerciseId]?.category || 'Other'
+      catSets[cat] = (catSets[cat] || 0) + 1
+    }
+
+    return { totalVolume, totalSets, exercises, catSets, exerciseNames: exercises.map(e => e.name) }
   }, [date])
 
   const grouped = exercises?.reduce((acc, e) => {
@@ -506,43 +531,115 @@ export default function Log() {
       </div>
 
       {/* Today's logged exercises */}
-      {todayDone && (
+      {todayDone && (() => {
+        const catEntries = Object.entries(todayDone.catSets).sort((a, b) => b[1] - a[1])
+        const CAT_COLORS = {
+          Legs: '#6ee7b7', Back: '#22d3ee', Chest: '#fca5a5', Shoulders: '#fdba74',
+          Biceps: '#c4b5fd', Triceps: '#fda4af', Abs: '#fde68a', Cardio: '#67e8f9', Other: '#a1a1aa',
+        }
+        return (
+          <div className="rounded-2xl p-4 space-y-3"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#3f3f46' }}>
+                Done today
+              </div>
+              <div className="flex items-center gap-2 text-xs" style={{ color: '#52525b' }}>
+                <span className="font-bold" style={{ color: '#c084fc' }}>
+                  {Math.round(todayDone.totalVolume).toLocaleString('en-US')} kg
+                </span>
+                <span style={{ color: '#3f3f46' }}>·</span>
+                <span>{todayDone.totalSets} sets</span>
+              </div>
+            </div>
+
+            {/* Exercise list — all visible */}
+            <div className="space-y-1.5">
+              {todayDone.exercises.map(ex => {
+                const c = CAT_COLORS[ex.category] || '#a1a1aa'
+                return (
+                  <div key={ex.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: c }} />
+                      <span className="text-sm truncate" style={{ color: '#d4d4d8' }}>{ex.name}</span>
+                    </div>
+                    <span className="text-xs shrink-0 ml-2" style={{ color: '#71717a' }}>
+                      {ex.maxWeight} kg × {ex.setCount}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Category breakdown */}
+            {catEntries.length > 0 && (
+              <div className="space-y-1.5 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex rounded-full overflow-hidden" style={{ height: 5 }}>
+                  {catEntries.map(([cat, count]) => (
+                    <div key={cat} style={{
+                      width: `${(count / todayDone.totalSets) * 100}%`,
+                      background: CAT_COLORS[cat] || '#a1a1aa',
+                    }} />
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                  {catEntries.map(([cat, count]) => (
+                    <div key={cat} className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: CAT_COLORS[cat] || '#a1a1aa' }} />
+                      <span className="text-xs" style={{ color: '#71717a' }}>
+                        {cat} <span style={{ color: '#52525b' }}>{Math.round((count / todayDone.totalSets) * 100)}%</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Exercise blocks — collapse to summary while picker is open */}
+      {showPicker && entries.length > 0 ? (
         <div
-          className="rounded-2xl p-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+          className="rounded-2xl px-4 py-3"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            transition: 'opacity 200ms',
+          }}
         >
           <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#3f3f46' }}>
-            Done today
+            In progress · {entries.length} {entries.length === 1 ? 'exercise' : 'exercises'}
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-bold" style={{ color: '#f8f8ff' }}>
-                {Math.round(todayDone.totalVolume).toLocaleString('en-US')} kg lifted
-              </div>
-              <div className="text-xs mt-1 truncate" style={{ color: '#52525b' }}>
-                {todayDone.exerciseNames.join(', ')}
-              </div>
-            </div>
-            <div
-              className="text-sm font-bold px-3 py-1.5 rounded-xl shrink-0"
-              style={{ background: 'rgba(139,92,246,0.12)', color: '#a78bfa' }}
-            >
-              {todayDone.exerciseNames.length} exercise{todayDone.exerciseNames.length !== 1 ? 's' : ''}
-            </div>
+          <div className="space-y-1">
+            {entries.map(entry => {
+              const ex = exercises?.find(e => e.id === entry.exerciseId)
+              const sets = entrySetsRef.current[entry.key] ?? entry.sets
+              const filledSets = sets.filter(s => s.weight !== '' && parseFloat(s.weight) > 0).length
+              return (
+                <div key={entry.key} className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: '#d4d4d8' }}>{ex?.name ?? '—'}</span>
+                  <span className="text-xs" style={{ color: '#52525b' }}>
+                    {filledSets > 0 ? `${filledSets} / ${sets.length} sets` : `${sets.length} sets`}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
+      ) : (
+        entries.map(entry => (
+          <ExerciseBlock
+            key={entry.key}
+            entry={entry}
+            exercises={exercises}
+            onRemove={() => removeEntry(entry.key)}
+            onSetsChange={sets => { entrySetsRef.current[entry.key] = sets }}
+          />
+        ))
       )}
-
-      {/* Exercise blocks */}
-      {entries.map(entry => (
-        <ExerciseBlock
-          key={entry.key}
-          entry={entry}
-          exercises={exercises}
-          onRemove={() => removeEntry(entry.key)}
-          onSetsChange={sets => { entrySetsRef.current[entry.key] = sets }}
-        />
-      ))}
 
       {/* Empty state guidance card */}
       {entries.length === 0 && !showPicker && (
