@@ -255,19 +255,20 @@ function WorkoutDetail({ workout, onDelete, onDeleted }) {
   )
 }
 
-function WorkoutCard({ workout, onDeleted }) {
+// Groups all workouts on the same date into one collapsible day card
+function DayCard({ date, workouts, onDeleted }) {
   const [open, setOpen] = useState(false)
-  const [deleted, setDeleted] = useState(false)
+  const [deletedIds, setDeletedIds] = useState(new Set())
 
-  if (deleted) return null
+  const active = workouts.filter(w => !deletedIds.has(w.id))
+  if (!active.length) return null
+
+  const handleDelete = (id) => setDeletedIds(prev => new Set([...prev, id]))
 
   return (
     <div
       className="rounded-2xl overflow-hidden transition-all"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.07)',
-      }}
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
     >
       <button
         onClick={() => setOpen(o => !o)}
@@ -275,16 +276,17 @@ function WorkoutCard({ workout, onDeleted }) {
       >
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-sm" style={{ color: '#f8f8ff' }}>
-            {formatDate(workout.date)}
+            {formatDate(date)}
           </div>
+          {active.length > 1 && (
+            <div className="text-xs mt-0.5" style={{ color: '#52525b' }}>
+              {active.length} sessions
+            </div>
+          )}
         </div>
         <span
           className="ml-3 transition-transform duration-200 shrink-0"
-          style={{
-            color: '#52525b',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            display: 'inline-block',
-          }}
+          style={{ color: '#52525b', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
             <polyline points="6 9 12 15 18 9" />
@@ -293,11 +295,25 @@ function WorkoutCard({ workout, onDeleted }) {
       </button>
 
       {open && (
-        <div
-          className="px-4 pb-4"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-        >
-          <WorkoutDetail workout={workout} onDelete={() => setDeleted(true)} onDeleted={onDeleted} />
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          {active.map((w, i) => (
+            <div
+              key={w.id}
+              className="px-4 pb-4"
+              style={{ borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none', paddingTop: 12 }}
+            >
+              {active.length > 1 && (
+                <div className="text-xs font-semibold mb-2 uppercase tracking-widest" style={{ color: '#3f3f46' }}>
+                  Session {i + 1}
+                </div>
+              )}
+              <WorkoutDetail
+                workout={w}
+                onDelete={() => handleDelete(w.id)}
+                onDeleted={onDeleted}
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -730,7 +746,22 @@ export default function History() {
               <div className="text-sm mt-1" style={{ color: '#52525b' }}>Try adjusting your filters</div>
             </div>
           ) : (
-            filtered.map(w => <WorkoutCard key={w.id} workout={w} onDeleted={handleDeleted} />)
+            (() => {
+              // Group workouts by date (filtered is already sorted date desc)
+              const byDay = []
+              const idx = {}
+              for (const w of filtered) {
+                if (idx[w.date] === undefined) {
+                  idx[w.date] = byDay.length
+                  byDay.push({ date: w.date, workouts: [w] })
+                } else {
+                  byDay[idx[w.date]].workouts.push(w)
+                }
+              }
+              return byDay.map(({ date, workouts }) => (
+                <DayCard key={date} date={date} workouts={workouts} onDeleted={handleDeleted} />
+              ))
+            })()
           )}
         </>
       )}

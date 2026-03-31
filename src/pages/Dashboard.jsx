@@ -50,7 +50,7 @@ function motivationalMsg(streak, daysSinceLast) {
   return { text: 'Ready for a workout?', color: '#8b5cf6' }
 }
 
-export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWeekly }) {
+export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWeekly, onOpenAllTime }) {
   const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray(), [], [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [], [])
   const allExercises = useLiveQuery(() => db.exercises.toArray(), [], [])
@@ -300,8 +300,9 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
           <div className="text-xs mt-2" style={{ color: '#3f3f46' }}>See all →</div>
         </button>
 
-        <div
-          className="rounded-2xl p-4"
+        <button
+          onClick={onOpenAllTime}
+          className="rounded-2xl p-4 text-left active:opacity-80 transition-opacity"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
         >
           <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#3f3f46' }}>
@@ -314,7 +315,8 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
           <div className="text-xs mt-2" style={{ color: '#3f3f46' }}>
             {allWorkouts.length} workouts
           </div>
-        </div>
+          <div className="text-xs mt-1" style={{ color: '#3f3f46' }}>See all →</div>
+        </button>
       </div>
 
       {/* 8-week bar chart */}

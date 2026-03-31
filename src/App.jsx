@@ -8,6 +8,7 @@ import AbsolutePRs from './pages/AbsolutePRs'
 import Consistency from './pages/Consistency'
 import LogViewer from './pages/LogViewer'
 import WeeklyInsights from './pages/WeeklyInsights'
+import AllTimeVolume from './pages/AllTimeVolume'
 
 const TABS = [
   {
@@ -119,7 +120,7 @@ export default function App() {
             Offline — changes saved locally
           </div>
         )}
-        {tab === 'dashboard' && <Dashboard onStartWorkout={() => setTab('log')} onOpenConsistency={() => setSubView('consistency')} onOpenWeekly={() => setSubView('weekly')} />}
+        {tab === 'dashboard' && <Dashboard onStartWorkout={() => setTab('log')} onOpenConsistency={() => setSubView('consistency')} onOpenWeekly={() => setSubView('weekly')} onOpenAllTime={() => setSubView('alltime')} />}
         {tab === 'log' && <Log />}
         {tab === 'history' && <History />}
         {tab === 'reports' && <Reports />}
@@ -140,6 +141,11 @@ export default function App() {
       {subView === 'weekly' && (
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: '#0b0b11' }}>
           <WeeklyInsights onBack={() => setSubView(null)} />
+        </div>
+      )}
+      {subView === 'alltime' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: '#0b0b11' }}>
+          <AllTimeVolume onBack={() => setSubView(null)} />
         </div>
       )}
 

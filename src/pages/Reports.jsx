@@ -284,28 +284,34 @@ function DailyView() {
 
     const exercises = await db.exercises.toArray()
     const exMap = Object.fromEntries(exercises.map(e => [e.id, e]))
-
-    const result = []
-    for (const workout of workouts) {
-      const sets = await db.sets.where('workoutId').equals(workout.id).toArray()
-      if (!sets.length) continue
-
-      const totalVolume = sets.reduce((sum, s) => {
-        const multiplier = exMap[s.exerciseId]?.unilateral ? 2 : 1
-        return sum + s.weight * s.reps * multiplier
-      }, 0)
-      const totalSets = sets.length
-      const exerciseCount = new Set(sets.map(s => s.exerciseId)).size
-
-      result.push({
-        date: workout.date,
-        label: formatDate(workout.date),
-        total_volume: Math.round(totalVolume),
-        total_sets: totalSets,
-        exercise_count: exerciseCount,
-      })
+    const allSets = await db.sets.toArray()
+    const setsByWorkout = {}
+    for (const s of allSets) {
+      if (!setsByWorkout[s.workoutId]) setsByWorkout[s.workoutId] = []
+      setsByWorkout[s.workoutId].push(s)
     }
-    return result
+
+    // Aggregate all workouts on the same date into one data point
+    const byDate = {}
+    for (const workout of workouts) {
+      const sets = setsByWorkout[workout.id] || []
+      if (!sets.length) continue
+      if (!byDate[workout.date]) byDate[workout.date] = { totalVolume: 0, exerciseIds: new Set() }
+      for (const s of sets) {
+        const mul = exMap[s.exerciseId]?.unilateral ? 2 : 1
+        byDate[workout.date].totalVolume += s.weight * s.reps * mul
+        byDate[workout.date].exerciseIds.add(s.exerciseId)
+      }
+    }
+
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { totalVolume, exerciseIds }]) => ({
+        date,
+        label: formatDate(date),
+        total_volume: Math.round(totalVolume),
+        exercise_count: exerciseIds.size,
+      }))
   })
 
   if (!data) return (
@@ -333,7 +339,7 @@ function DailyView() {
       {/* Summary chips */}
       <div className="flex gap-2">
         <div className="flex-1 rounded-xl px-3 py-2.5 text-center" style={{ background: 'rgba(139,92,246,0.10)', border: '1px solid rgba(139,92,246,0.18)' }}>
-          <div className="text-xs" style={{ color: '#71717a' }}>Avg / workout</div>
+          <div className="text-xs" style={{ color: '#71717a' }}>Avg / day</div>
           <div className="text-sm font-bold mt-0.5" style={{ color: '#c4b5fd' }}>{avgVolume.toLocaleString('en-US')} kg</div>
         </div>
         <div className="flex-1 rounded-xl px-3 py-2.5 text-center" style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.15)' }}>
@@ -341,14 +347,14 @@ function DailyView() {
           <div className="text-sm font-bold mt-0.5" style={{ color: '#22d3ee' }}>{maxVolume.toLocaleString('en-US')} kg</div>
         </div>
         <div className="flex-1 rounded-xl px-3 py-2.5 text-center" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
-          <div className="text-xs" style={{ color: '#71717a' }}>Workouts</div>
+          <div className="text-xs" style={{ color: '#71717a' }}>Days</div>
           <div className="text-sm font-bold mt-0.5" style={{ color: '#10b981' }}>{data.length}</div>
         </div>
       </div>
 
       <ChartCard
         title="Total volume"
-        subtitle="weight lifted per workout"
+        subtitle="weight lifted per day"
         latestValue={latest.total_volume}
         latestUnit="kg"
         data={data}
@@ -357,7 +363,7 @@ function DailyView() {
 
       <ChartCard
         title="Exercise count"
-        subtitle="different exercises per workout"
+        subtitle="different exercises per day"
         latestValue={latest.exercise_count}
         latestUnit=""
         data={data}
