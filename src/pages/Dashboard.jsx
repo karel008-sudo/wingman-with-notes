@@ -50,7 +50,7 @@ function motivationalMsg(streak, daysSinceLast) {
   return { text: 'Ready for a workout?', color: '#8b5cf6' }
 }
 
-export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWeekly, onOpenAllTime }) {
+export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWeekly, onOpenAllTime, onOpenVolumeHistory }) {
   const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray(), [], [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [], [])
   const allExercises = useLiveQuery(() => db.exercises.toArray(), [], [])
@@ -320,8 +320,9 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
       </div>
 
       {/* 8-week bar chart */}
-      <div
-        className="rounded-2xl p-4"
+      <button
+        onClick={onOpenVolumeHistory}
+        className="w-full rounded-2xl p-4 text-left active:opacity-80 transition-opacity"
         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
         <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#3f3f46' }}>
@@ -347,7 +348,10 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
           <span className="text-xs" style={{ color: '#3f3f46' }}>-7 wks</span>
           <span className="text-xs font-semibold" style={{ color: '#8b5cf6' }}>this week</span>
         </div>
-      </div>
+        <div className="flex justify-end mt-2">
+          <span className="text-xs" style={{ color: '#3f3f46' }}>See full history →</span>
+        </div>
+      </button>
 
       {/* Last workout */}
       {lastWorkout && (
