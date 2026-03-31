@@ -50,6 +50,28 @@ function motivationalMsg(streak, daysSinceLast) {
   return { text: 'Ready for a workout?', color: '#8b5cf6' }
 }
 
+// ── Training Status helpers ───────────────────────────────────────────────────
+
+const DASH_CAT_COLORS = {
+  Legs: '#6ee7b7', Back: '#22d3ee', Chest: '#fca5a5',
+  Shoulders: '#fdba74', Biceps: '#c4b5fd', Triceps: '#fda4af',
+  Abs: '#fde68a', Cardio: '#67e8f9', Other: '#a1a1aa',
+}
+
+function catFreshnessColor(d) {
+  if (d === 0) return '#f43f5e'   // today — just trained
+  if (d === 1) return '#f59e0b'   // 1d — recovering
+  if (d === 2) return '#a78bfa'   // 2d — almost fresh
+  return '#10b981'                // 3d+ — fresh
+}
+
+function catFreshnessLabel(d) {
+  if (d === 0) return 'Today'
+  if (d === 1) return '1d ago'
+  if (d >= 7)  return '7d+'
+  return `${d}d ago`
+}
+
 export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWeekly, onOpenAllTime, onOpenVolumeHistory }) {
   const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray(), [], [])
   const allSets = useLiveQuery(() => db.sets.toArray(), [], [])
@@ -125,6 +147,57 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
   const lastWorkoutExercises = lastWorkout
     ? [...new Set(allSets.filter(s => s.workoutId === lastWorkout.id).map(s => exMap[s.exerciseId]?.name).filter(Boolean))]
     : []
+
+  // ── Training Status: when was each muscle group last trained ─────────────
+  const catLastDate = {}
+  for (const w of allWorkouts) {
+    for (const s of allSets.filter(s => s.workoutId === w.id)) {
+      const cat = exMap[s.exerciseId]?.category
+      if (cat && (!catLastDate[cat] || w.date > catLastDate[cat])) catLastDate[cat] = w.date
+    }
+  }
+  const catStatus = Object.entries(catLastDate)
+    .map(([cat, date]) => ({
+      cat,
+      daysAgo: Math.round((new Date(today) - new Date(date + 'T12:00:00')) / 86400000),
+    }))
+    .sort((a, b) => b.daysAgo - a.daysAgo) // most rested first
+
+  // Last workout session type
+  const lastWoSets = lastWorkout ? allSets.filter(s => s.workoutId === lastWorkout.id) : []
+  const lastWoCatSets = {}
+  for (const s of lastWoSets) {
+    const cat = exMap[s.exerciseId]?.category || 'Other'
+    lastWoCatSets[cat] = (lastWoCatSets[cat] || 0) + 1
+  }
+  const lastWoTotal = Object.values(lastWoCatSets).reduce((a, b) => a + b, 0)
+  const lastWoType = (() => {
+    if (!lastWoTotal) return null
+    const pct = cat => ((lastWoCatSets[cat] || 0) / lastWoTotal) * 100
+    const legs = pct('Legs'), push = pct('Chest') + pct('Shoulders') + pct('Triceps'), pull = pct('Back') + pct('Biceps')
+    if (legs >= 50) return 'Leg session'
+    if (push >= 50) return 'Push session'
+    if (pull >= 50) return 'Pull session'
+    if (push >= 30 && pull >= 25) return 'Upper body'
+    if (legs >= 20 && (push + pull) >= 35) return 'Full body'
+    return null
+  })()
+
+  // Recommendation based on muscle freshness
+  const freshCats = catStatus.filter(c => c.daysAgo >= 3).map(c => c.cat)
+  const pushFresh = freshCats.filter(c => ['Chest', 'Shoulders', 'Triceps'].includes(c))
+  const pullFresh = freshCats.filter(c => ['Back', 'Biceps'].includes(c))
+  const legsFresh = freshCats.includes('Legs')
+  const tsRecommendation = (() => {
+    if (catStatus.length < 2) return null
+    const legsDays = catStatus.find(c => c.cat === 'Legs')?.daysAgo ?? 0
+    if (legsFresh && legsDays >= 4) return 'Legs well-rested — Leg day?'
+    if (pushFresh.length >= 2) return `${pushFresh.slice(0, 2).join(' & ')} fresh — Push session?`
+    if (pullFresh.length >= 1 && legsFresh) return 'Back & Legs fresh — Full body?'
+    if (freshCats.length >= 2) return `${freshCats.slice(0, 2).join(' & ')} rested — good to go`
+    if (catStatus.length > 0 && catStatus.every(c => c.daysAgo <= 1)) return 'Active recovery or rest today'
+    return null
+  })()
 
   // Last 8 weeks volume for mini bar chart
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -353,32 +426,54 @@ export default function Dashboard({ onStartWorkout, onOpenConsistency, onOpenWee
         </div>
       </button>
 
-      {/* Last workout */}
+      {/* Training Status */}
       {lastWorkout && (
-        <div
-          className="rounded-2xl p-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#3f3f46' }}>
-            Last workout
-          </div>
+        <div className="rounded-2xl p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* Header */}
           <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold" style={{ color: '#f8f8ff' }}>
-                {daysAgoText(lastWorkout.date)}
+            <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#3f3f46' }}>
+              Training Status
+            </div>
+            <div className="text-xs" style={{ color: '#52525b' }}>
+              {daysAgoText(lastWorkout.date)}{lastWoType ? ` · ${lastWoType}` : ''}
+            </div>
+          </div>
+
+          {catStatus.length > 0 ? (
+            <>
+              {/* Muscle group freshness grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {catStatus.slice(0, 6).map(({ cat, daysAgo }) => (
+                  <div key={cat} className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: DASH_CAT_COLORS[cat] || '#a1a1aa' }} />
+                      <span className="text-xs truncate" style={{ color: '#d4d4d8' }}>{cat}</span>
+                    </div>
+                    <span className="text-xs font-semibold shrink-0 ml-1" style={{ color: catFreshnessColor(daysAgo) }}>
+                      {catFreshnessLabel(daysAgo)}
+                    </span>
+                  </div>
+                ))}
               </div>
+
+              {/* Recommendation */}
+              {tsRecommendation && (
+                <div className="flex items-center gap-2 pt-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#8b5cf6' }} />
+                  <span className="text-xs font-medium" style={{ color: '#a78bfa' }}>{tsRecommendation}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <div className="font-semibold text-sm" style={{ color: '#f8f8ff' }}>{daysAgoText(lastWorkout.date)}</div>
               <div className="text-xs mt-1" style={{ color: '#52525b' }}>
                 {lastWorkoutExercises.slice(0, 4).join(', ')}
                 {lastWorkoutExercises.length > 4 && ` +${lastWorkoutExercises.length - 4}`}
               </div>
+              <div className="text-xs mt-2" style={{ color: '#3f3f46' }}>Log more workouts to track muscle freshness</div>
             </div>
-            <div
-              className="text-sm font-bold px-3 py-1.5 rounded-xl"
-              style={{ background: 'rgba(139,92,246,0.12)', color: '#a78bfa' }}
-            >
-              {lastWorkoutExercises.length} exercises
-            </div>
-          </div>
+          )}
         </div>
       )}
 
