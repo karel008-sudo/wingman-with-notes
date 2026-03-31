@@ -29,6 +29,18 @@ const CATEGORY_COLORS = {
   Other:     { bg: 'rgba(113,113,122,0.2)', text: '#a1a1aa' },
 }
 
+const CATEGORY_ICONS = {
+  Chest:     '🫷',
+  Back:      '🏹',
+  Shoulders: '🏋️',
+  Legs:      '🦵',
+  Biceps:    '💪',
+  Triceps:   '🦾',
+  Abs:       '🔥',
+  Cardio:    '❤️',
+  Other:     '⚡',
+}
+
 function CategoryBadge({ category }) {
   const colors = CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Other']
   return (
@@ -597,6 +609,7 @@ export default function Log() {
                         el.currentTarget.style.color = '#d4d4d8'
                       }}
                     >
+                      <span style={{ fontSize: 14 }}>{CATEGORY_ICONS[e.category] ?? '⚡'}</span>
                       <span>{e.name}</span>
                       {e.unilateral && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(139,92,246,0.2)', color: '#a78bfa' }}>

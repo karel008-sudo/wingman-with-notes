@@ -4,6 +4,18 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 const CATEGORIES = ['Chest', 'Back', 'Shoulders', 'Legs', 'Biceps', 'Triceps', 'Abs', 'Cardio', 'Other']
 
+const CATEGORY_ICONS = {
+  Chest:     '🫷',
+  Back:      '🏹',
+  Shoulders: '🏋️',
+  Legs:      '🦵',
+  Biceps:    '💪',
+  Triceps:   '🦾',
+  Abs:       '🔥',
+  Cardio:    '❤️',
+  Other:     '⚡',
+}
+
 const CATEGORY_COLORS = {
   Chest:     { bg: 'rgba(239,68,68,0.12)',  text: '#fca5a5' },
   Back:      { bg: 'rgba(34,211,238,0.10)', text: '#22d3ee' },
@@ -263,6 +275,7 @@ export default function Exercises({ onOpenLogs }) {
                     border: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
+                  <span style={{ fontSize: 16 }}>{CATEGORY_ICONS[e.category] ?? '⚡'}</span>
                   <span className="flex-1 text-sm" style={{ color: '#d4d4d8' }}>{e.name}</span>
                   {e.unilateral && (
                     <span
