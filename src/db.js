@@ -63,32 +63,44 @@ const CORRECT_EXERCISES = [
 const CORRECT_NAMES = new Set(CORRECT_EXERCISES.map(e => e.name))
 
 db.on('ready', async () => {
-  const existing = await db.exercises.toArray()
+  try {
+    const existing = await db.exercises.toArray()
 
-  // Remove exercises not in the correct list
-  const stale = existing.filter(e => !CORRECT_NAMES.has(e.name))
-  if (stale.length) {
-    await db.exercises.bulkDelete(stale.map(e => e.id))
-  }
+    // Remove exercises not in the correct list
+    const stale = existing.filter(e => !CORRECT_NAMES.has(e.name))
 
-  // Add exercises that are missing, and update fields (e.g. unilateral) on existing ones
-  const existingByName = Object.fromEntries(existing.map(e => [e.name, e]))
-  const missing = []
-  for (const ce of CORRECT_EXERCISES) {
-    const ex = existingByName[ce.name]
-    if (!ex) {
-      missing.push(ce)
-    } else {
-      // Update fields if they differ (e.g. unilateral flag added later)
-      const needsUpdate =
-        ex.category !== ce.category ||
-        Boolean(ex.unilateral) !== Boolean(ce.unilateral)
-      if (needsUpdate) {
-        await db.exercises.update(ex.id, { category: ce.category, unilateral: ce.unilateral ?? false })
+    // Compute adds and updates before touching the DB
+    const existingByName = Object.fromEntries(existing.map(e => [e.name, e]))
+    const missing = []
+    const toUpdate = [] // { id, changes }
+    for (const ce of CORRECT_EXERCISES) {
+      const ex = existingByName[ce.name]
+      if (!ex) {
+        missing.push(ce)
+      } else {
+        const needsUpdate =
+          ex.category !== ce.category ||
+          Boolean(ex.unilateral) !== Boolean(ce.unilateral)
+        if (needsUpdate) {
+          toUpdate.push({ id: ex.id, changes: { category: ce.category, unilateral: ce.unilateral ?? false } })
+        }
       }
     }
-  }
-  if (missing.length) {
-    await db.exercises.bulkAdd(missing)
+
+    // Batch all writes in a single transaction to avoid multiple round-trips
+    // and reduce the chance of Safari IDB timing out mid-sequence
+    if (stale.length || missing.length || toUpdate.length) {
+      await db.transaction('rw', db.exercises, async () => {
+        if (stale.length)   await db.exercises.bulkDelete(stale.map(e => e.id))
+        if (missing.length) await db.exercises.bulkAdd(missing)
+        for (const { id, changes } of toUpdate) {
+          await db.exercises.update(id, changes)
+        }
+      })
+    }
+  } catch (err) {
+    // Never let exercise reconciliation break the DB ready state.
+    // Exercises will be reconciled on the next open.
+    console.warn('[db] Exercise reconciliation failed:', err?.message ?? err)
   }
 })

@@ -51,18 +51,9 @@ function motivationalMsg(streak, daysSinceLast) {
 }
 
 export default function Dashboard({ onStartWorkout, onOpenConsistency }) {
-  const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray())
-  const allSets = useLiveQuery(() => db.sets.toArray())
-  const allExercises = useLiveQuery(() => db.exercises.toArray())
-
-  if (!allWorkouts || !allSets || !allExercises) {
-    return (
-      <div className="p-4 pt-6 flex flex-col items-center justify-center gap-2" style={{ minHeight: 200 }}>
-        <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'rgba(139,92,246,0.3)', borderTopColor: '#8b5cf6' }} />
-        <span className="text-xs" style={{ color: '#3f3f46' }}>Loading...</span>
-      </div>
-    )
-  }
+  const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray(), [], [])
+  const allSets = useLiveQuery(() => db.sets.toArray(), [], [])
+  const allExercises = useLiveQuery(() => db.exercises.toArray(), [], [])
 
   const exMap = Object.fromEntries(allExercises.map(e => [e.id, e]))
 

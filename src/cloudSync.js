@@ -29,9 +29,13 @@ export async function cloudBackup(db) {
 
 export async function cloudRestore(db) {
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
     const res = await fetch(`${SUPABASE_URL}/rest/v1/backup?id=eq.main&select=data`, {
       headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` },
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
     if (!res.ok) return false
 
     const rows = await res.json()

@@ -74,7 +74,9 @@ export default function AbsolutePRs() {
         if (b.weight !== a.weight) return b.weight - a.weight
         return a.exerciseName.localeCompare(b.exerciseName)
       })
-    )
+    ),
+    [],
+    []
   )
 
   const [categoryFilter, setCategoryFilter] = useState(null)

@@ -5,8 +5,20 @@ import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { initLogger, logger } from './logger.js'
 import { db } from './db.js'
+import { cloudRestore } from './cloudSync.js'
 
 initLogger(db)
+
+// Auto-restore from cloud if local DB is empty — runs AFTER ready, never blocks it
+db.on('ready', () => {
+  setTimeout(async () => {
+    const count = await db.workouts.count()
+    if (count === 0) {
+      const restored = await cloudRestore(db)
+      if (restored) logger.info('sync', 'Auto-restored data from cloud backup')
+    }
+  }, 500)
+})
 
 // Register SW manually with updateViaCache: 'none' so iOS always fetches
 // the latest sw.js without relying on HTTP cache headers

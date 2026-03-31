@@ -17,7 +17,7 @@ const CATEGORY_COLORS = {
 }
 
 export default function Exercises({ onOpenLogs }) {
-  const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray())
+  const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray(), [], [])
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [category, setCategory] = useState(CATEGORIES[0])
@@ -70,15 +70,6 @@ export default function Exercises({ onOpenLogs }) {
     acc[cat].push(e)
     return acc
   }, {})
-
-  if (!exercises) {
-    return (
-      <div className="p-4 pt-6 flex flex-col items-center justify-center gap-2" style={{ minHeight: 200 }}>
-        <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'rgba(139,92,246,0.3)', borderTopColor: '#8b5cf6' }} />
-        <span className="text-xs" style={{ color: '#3f3f46' }}>Loading...</span>
-      </div>
-    )
-  }
 
   return (
     <div className="p-4 space-y-4 pb-6">

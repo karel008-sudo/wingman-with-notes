@@ -3,6 +3,7 @@ import { db } from '../db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { haptic } from '../haptic'
 import { logger } from '../logger'
+import { cloudBackup } from '../cloudSync'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const DEFAULT_REPS = 10
@@ -277,7 +278,9 @@ function ExerciseBlock({ entry, exercises, onRemove, onSetsChange }) {
 
 export default function Log() {
   const exercises = useLiveQuery(() =>
-    db.exercises.orderBy('name').toArray()
+    db.exercises.orderBy('name').toArray(),
+    [],
+    []
   )
 
   const [date, setDate] = useState(today())
@@ -389,6 +392,7 @@ export default function Log() {
     }
 
     logger.info('workout', 'Workout saved', { date, exerciseCount: entries.length, newPRs: newPRs.length })
+    cloudBackup(db)
 
     setSaving(false)
     setSaved(true)
