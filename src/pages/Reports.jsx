@@ -154,7 +154,7 @@ function ExerciseView({ exercises }) {
           label: formatDate(date),
           max_weight: Math.max(...sets.map(s => s.weight)),
           total_volume: Math.round(sets.reduce((sum, s) => sum + s.weight * s.reps * multiplier, 0)),
-          max_reps: Math.max(...sets.map(s => s.reps)) * multiplier,
+          max_reps: Math.max(...sets.map(s => s.reps)),
         }))
     } catch (err) {
       console.error('ExerciseView data error', err)
@@ -207,7 +207,7 @@ function ExerciseView({ exercises }) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 shrink-0">
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          Unilateral exercise — volume and reps include both sides (×2)
+          Unilateral exercise — volume includes both sides (×2)
         </div>
       )}
 

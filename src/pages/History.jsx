@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db } from '../db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { importHistory } from '../importHistory'
 import { haptic } from '../haptic'
+import { logger } from '../logger'
 
 function ExerciseSparkline({ exerciseId, currentDate }) {
   const data = useLiveQuery(async () => {
+    if (!exerciseId) return []
     const allSets = await db.sets.where('exerciseId').equals(exerciseId).toArray()
     if (!allSets.length) return []
     const workoutIds = [...new Set(allSets.map(s => s.workoutId))]
@@ -108,22 +110,25 @@ function WorkoutDetail({ workout, onDelete, onDeleted }) {
     [exerciseIds.join(',')]
   )
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
   const exMap = Object.fromEntries(exercises?.map(e => [e.id, e]) ?? [])
 
-  const grouped = exerciseIds.map(eid => ({
-    exercise: exMap[eid],
-    sets: sets?.filter(s => s.exerciseId === eid).sort((a, b) => a.setNumber - b.setNumber) ?? [],
-  }))
+  const grouped = exerciseIds
+    .map(eid => ({
+      exercise: exMap[eid],
+      sets: sets?.filter(s => s.exerciseId === eid).sort((a, b) => a.setNumber - b.setNumber) ?? [],
+    }))
+    .filter(g => g.exercise)
 
   const totalVolume = sets?.reduce((sum, s) => sum + s.weight * s.reps, 0) ?? 0
   const totalSets = sets?.length ?? 0
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const handleDelete = async () => {
     const capturedSets = sets ? [...sets] : []
     await db.sets.where('workoutId').equals(workout.id).delete()
     await db.workouts.delete(workout.id)
+    logger.info('workout', 'Workout deleted', { workoutId: workout.id, date: workout.date, setCount: capturedSets.length })
     haptic.warning()
     onDelete()
     onDeleted?.({ workout, sets: capturedSets })
@@ -503,6 +508,10 @@ export default function History() {
   const [reimportConfirm, setReimportConfirm] = useState(false)
   const [undoState, setUndoState] = useState(null)
 
+  useEffect(() => {
+    return () => { if (undoState?.timer) clearTimeout(undoState.timer) }
+  }, [undoState])
+
   const handleDeleted = ({ workout, sets }) => {
     if (undoState?.timer) clearTimeout(undoState.timer)
     const timer = setTimeout(() => setUndoState(null), 5000)
@@ -563,7 +572,7 @@ export default function History() {
         </div>
         <div className="w-full rounded-2xl p-4 space-y-3"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="text-sm font-semibold" style={{ color: '#f8f8ff' }}>Load historical data</div>
+          <div className="text-sm font-semibold" style={{ color: '#f8f8ff' }}>Import 21 historical workouts</div>
           <div className="text-xs" style={{ color: '#71717a' }}>21 workouts from Feb 17 to Mar 29, 2026</div>
           <button onClick={handleImport} disabled={importing}
             className="w-full py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"

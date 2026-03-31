@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { db } from '../db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { haptic } from '../haptic'
@@ -84,6 +84,12 @@ export default function AbsolutePRs() {
   const [conflictState, setConflictState] = useState(null)
   const [recentlyAddedId, setRecentlyAddedId] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
+  const [formError, setFormError] = useState('')
+  const successTimerRef = useRef(null)
+
+  useEffect(() => {
+    return () => { if (successTimerRef.current) clearTimeout(successTimerRef.current) }
+  }, [])
 
   const [formData, setFormData] = useState(emptyForm())
 
@@ -119,6 +125,7 @@ export default function AbsolutePRs() {
     setFormOpen(false)
     setEditingPR(null)
     setFormData(emptyForm())
+    setFormError('')
   }
 
   function confirmDelete(pr) {
@@ -133,16 +140,21 @@ export default function AbsolutePRs() {
   }
 
   function showSuccess(msg, id) {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current)
     setSuccessMsg(msg)
     setRecentlyAddedId(id)
-    setTimeout(() => setSuccessMsg(null), 3000)
-    setTimeout(() => setRecentlyAddedId(null), 3000)
+    successTimerRef.current = setTimeout(() => {
+      setSuccessMsg(null)
+      setRecentlyAddedId(null)
+    }, 3000)
   }
 
   async function handleSave() {
     const name = formData.exerciseName.trim()
     const weight = parseFloat(formData.weight)
-    if (!name || isNaN(weight) || weight <= 0) return
+    if (!name) { setFormError('Exercise name is required'); return }
+    if (isNaN(weight) || weight <= 0) { setFormError('Enter a valid weight greater than 0'); return }
+    setFormError('')
 
     const now = new Date().toISOString()
 
@@ -220,15 +232,18 @@ export default function AbsolutePRs() {
   async function handleConflictOverride() {
     if (!conflictState) return
     const now = new Date().toISOString()
-    const id = await db.absolutePRs.add({
-      ...conflictState.incoming,
-      createdAt: now,
+    await db.absolutePRs.update(conflictState.existing.id, {
+      weight: conflictState.incoming.weight,
+      category: conflictState.incoming.category,
+      achievedAt: conflictState.incoming.achievedAt,
+      note: conflictState.incoming.note,
       updatedAt: now,
     })
+    const id = conflictState.existing.id
     setConflictState(null)
     closeForm()
     haptic.success()
-    showSuccess('PR saved!', id)
+    showSuccess('PR replaced!', id)
   }
 
   function dismissConflict() {
@@ -581,6 +596,11 @@ export default function AbsolutePRs() {
               />
             </div>
 
+            {/* Form error */}
+            {formError && (
+              <div className="text-xs px-1" style={{ color: '#f43f5e' }}>{formError}</div>
+            )}
+
             {/* Buttons */}
             <div className="flex gap-2 pt-1">
               <button
@@ -683,7 +703,7 @@ export default function AbsolutePRs() {
                 minHeight: 44,
               }}
             >
-              Override anyway
+              Replace current record
             </button>
           </div>
         </div>

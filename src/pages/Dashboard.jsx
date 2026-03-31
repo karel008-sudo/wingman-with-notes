@@ -50,7 +50,7 @@ function motivationalMsg(streak, daysSinceLast) {
   return { text: 'Ready for a workout?', color: '#8b5cf6' }
 }
 
-export default function Dashboard({ onStartWorkout }) {
+export default function Dashboard({ onStartWorkout, onOpenConsistency }) {
   const allWorkouts = useLiveQuery(() => db.workouts.orderBy('date').toArray())
   const allSets = useLiveQuery(() => db.sets.toArray())
   const allExercises = useLiveQuery(() => db.exercises.toArray())
@@ -231,8 +231,9 @@ export default function Dashboard({ onStartWorkout }) {
       </div>
 
       {/* Streak + week dots */}
-      <div
-        className="rounded-2xl p-4"
+      <button
+        onClick={onOpenConsistency}
+        className="w-full rounded-2xl p-4 text-left active:opacity-80 transition-opacity"
         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -277,7 +278,11 @@ export default function Dashboard({ onStartWorkout }) {
             </div>
           ))}
         </div>
-      </div>
+
+        <div className="flex justify-end mt-3">
+          <span className="text-xs font-medium" style={{ color: '#52525b' }}>See all →</span>
+        </div>
+      </button>
 
       {/* Volume this week vs last week */}
       <div className="grid grid-cols-2 gap-3">

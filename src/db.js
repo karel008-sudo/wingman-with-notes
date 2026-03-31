@@ -15,6 +15,14 @@ db.version(2).stores({
   absolutePRs: '++id, exerciseName, category, achievedAt',
 })
 
+db.version(3).stores({
+  exercises: '++id, name, category',
+  workouts: '++id, date',
+  sets: '++id, workoutId, exerciseId',
+  absolutePRs: '++id, exerciseName, category, achievedAt',
+  logs: '++id, timestamp, level, category',
+})
+
 const CORRECT_EXERCISES = [
   // Legs
   { name: 'Angler Leg Press',            category: 'Legs' },
@@ -46,7 +54,7 @@ const CORRECT_EXERCISES = [
   { name: 'Rear Delt',                    category: 'Shoulders' },
   // Biceps
   { name: 'Biceps Curl',                  category: 'Biceps' },
-  { name: 'Alternate Arm Curl',           category: 'Biceps' },
+  { name: 'Alternate Arm Curl',           category: 'Biceps', unilateral: true },
   // Triceps
   { name: 'Seated Dip',                   category: 'Triceps' },
   { name: 'French Press Machine',         category: 'Triceps' },

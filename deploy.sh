@@ -9,7 +9,7 @@ echo "Deploying to Netlify..."
 SITE_ID="b588a256-0346-4ec0-9d1d-dfcadf17acd7"
 TOKEN="nfp_Xie5BbzZfVrEdCcwq6Bm2Zj9djcV9JS101b6"
 
-zip -r /tmp/gym-diary-dist.zip dist/ -x "*.DS_Store"
+cd dist && zip -r /tmp/gym-diary-dist.zip . -x "*.DS_Store" && cd ..
 
 RESULT=$(curl -s -X POST "https://api.netlify.com/api/v1/sites/$SITE_ID/deploys" \
   -H "Authorization: Bearer $TOKEN" \

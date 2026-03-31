@@ -16,13 +16,15 @@ const CATEGORY_COLORS = {
   Other:     { bg: 'rgba(113,113,122,0.15)', text: '#a1a1aa' },
 }
 
-export default function Exercises() {
+export default function Exercises({ onOpenLogs }) {
   const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray())
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [category, setCategory] = useState(CATEGORIES[0])
   const [unilateral, setUnilateral] = useState(false)
   const [editId, setEditId] = useState(null)
+  const [nameError, setNameError] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const reset = () => {
     setName('')
@@ -30,10 +32,15 @@ export default function Exercises() {
     setUnilateral(false)
     setEditId(null)
     setShowForm(false)
+    setNameError(false)
   }
 
   const handleSave = async () => {
-    if (!name.trim()) return
+    if (!name.trim()) {
+      setNameError(true)
+      return
+    }
+    setNameError(false)
     if (editId) {
       await db.exercises.update(editId, { name: name.trim(), category, unilateral })
     } else {
@@ -48,10 +55,13 @@ export default function Exercises() {
     setCategory(e.category ?? CATEGORIES[0])
     setUnilateral(e.unilateral ?? false)
     setShowForm(true)
+    setNameError(false)
   }
 
-  const handleDelete = async (id) => {
-    await db.exercises.delete(id)
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    await db.exercises.delete(deleteTarget.id)
+    setDeleteTarget(null)
   }
 
   const grouped = exercises?.reduce((acc, e) => {
@@ -110,22 +120,26 @@ export default function Exercises() {
             type="text"
             placeholder="Exercise name"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { setName(e.target.value); if (nameError) setNameError(false) }}
             className="w-full rounded-xl px-3 py-2.5 text-sm outline-none transition-all"
             style={{
               background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.10)',
+              border: nameError ? '1px solid rgba(244,63,94,0.7)' : '1px solid rgba(255,255,255,0.10)',
               color: '#f8f8ff',
+              boxShadow: nameError ? '0 0 0 2px rgba(244,63,94,0.25)' : 'none',
             }}
             onFocus={e => {
-              e.target.style.boxShadow = '0 0 0 2px rgba(139,92,246,0.4)'
-              e.target.style.borderColor = 'rgba(139,92,246,0.5)'
+              e.target.style.boxShadow = nameError ? '0 0 0 2px rgba(244,63,94,0.25)' : '0 0 0 2px rgba(139,92,246,0.4)'
+              e.target.style.borderColor = nameError ? 'rgba(244,63,94,0.7)' : 'rgba(139,92,246,0.5)'
             }}
             onBlur={e => {
-              e.target.style.boxShadow = 'none'
-              e.target.style.borderColor = 'rgba(255,255,255,0.10)'
+              e.target.style.boxShadow = nameError ? '0 0 0 2px rgba(244,63,94,0.25)' : 'none'
+              e.target.style.borderColor = nameError ? 'rgba(244,63,94,0.7)' : 'rgba(255,255,255,0.10)'
             }}
           />
+          {nameError && (
+            <div className="text-xs mt-1" style={{ color: '#f43f5e' }}>Exercise name is required</div>
+          )}
 
           <div className="relative">
             <select
@@ -224,6 +238,16 @@ export default function Exercises() {
         </div>
       )}
 
+      {/* Empty state */}
+      {exercises.length === 0 && !showForm && (
+        <div className="rounded-2xl p-10 text-center fade-in"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.08)' }}>
+          <div className="text-4xl mb-3">🏋️</div>
+          <div className="font-semibold" style={{ color: '#d4d4d8' }}>No exercises yet</div>
+          <div className="text-sm mt-1" style={{ color: '#52525b' }}>Add your first exercise to get started</div>
+        </div>
+      )}
+
       {/* Exercise list grouped by category */}
       {grouped && Object.entries(grouped).map(([cat, list]) => {
         const colors = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS['Other']
@@ -267,7 +291,7 @@ export default function Exercises() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(e.id)}
+                    onClick={() => setDeleteTarget(e)}
                     className="flex items-center justify-center transition-colors"
                     style={{ color: '#3f3f46', minWidth: 36, minHeight: 36 }}
                     onMouseEnter={el => el.currentTarget.style.color = '#f43f5e'}
@@ -285,6 +309,83 @@ export default function Exercises() {
           </div>
         )
       })}
+
+      {/* Dev tools */}
+      <div className="pt-2 pb-2 flex items-center justify-center gap-4">
+        <button
+          onClick={onOpenLogs}
+          className="text-xs transition-colors"
+          style={{ color: '#3f3f46' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#52525b' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#3f3f46' }}
+        >
+          Dev Logs
+        </button>
+        <span style={{ color: '#27272a' }}>·</span>
+        <button
+          onClick={async () => {
+            if (!('serviceWorker' in navigator)) return
+            const reg = await navigator.serviceWorker.getRegistration()
+            if (reg) {
+              await reg.update()
+              if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+            }
+            window.location.reload()
+          }}
+          className="text-xs transition-colors"
+          style={{ color: '#3f3f46' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#52525b' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#3f3f46' }}
+        >
+          Force Update
+        </button>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl p-6 space-y-4"
+            style={{ background: '#1a1a26', border: '1px solid rgba(255,255,255,0.10)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                </svg>
+              </div>
+              <div className="font-bold text-lg" style={{ color: '#f8f8ff' }}>Delete exercise?</div>
+              <div className="text-sm mt-1" style={{ color: '#71717a' }}>{deleteTarget.name}</div>
+              <div className="text-sm mt-1" style={{ color: '#52525b' }}>This action cannot be undone.</div>
+            </div>
+            <button
+              onClick={handleDelete}
+              className="w-full py-3.5 rounded-2xl font-bold text-base transition-all"
+              style={{ background: 'linear-gradient(135deg, #dc2626, #f43f5e)', color: '#fff', minHeight: 44 }}
+            >
+              Delete exercise
+            </button>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="w-full py-3.5 rounded-2xl font-semibold text-base transition-all"
+              style={{ background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', minHeight: 44 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

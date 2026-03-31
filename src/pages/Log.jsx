@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { db } from '../db'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { haptic } from '../haptic'
+import { logger } from '../logger'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const DEFAULT_REPS = 10
@@ -110,10 +111,10 @@ function SetRow({ set, onChange, onDelete, isNew, prThreshold }) {
 
       <button
         onClick={onDelete}
-        className="shrink-0 text-xl leading-none text-center transition-colors flex items-center justify-center"
-        style={{ color: '#3f3f46', minWidth: 44, minHeight: 44 }}
+        className="shrink-0 text-xl leading-none text-center transition-colors flex items-center justify-center rounded-lg -mr-2"
+        style={{ color: '#71717a', width: 36, minHeight: 36 }}
         onMouseEnter={e => e.currentTarget.style.color = '#f43f5e'}
-        onMouseLeave={e => e.currentTarget.style.color = '#3f3f46'}
+        onMouseLeave={e => e.currentTarget.style.color = '#71717a'}
       >
         ×
       </button>
@@ -194,7 +195,7 @@ function ExerciseBlock({ entry, exercises, onRemove, onSetsChange }) {
             <div className="mt-2 space-y-1">
               {prevSessions.map(session => (
                 <div key={session.date} className="flex items-baseline gap-2">
-                  <span className="text-xs shrink-0 w-16" style={{ color: '#3f3f46' }}>
+                  <span className="text-xs shrink-0 whitespace-nowrap" style={{ color: '#3f3f46' }}>
                     {formatDatePill(session.date)}
                   </span>
                   <span className="text-xs" style={{ color: '#52525b' }}>
@@ -298,6 +299,20 @@ export default function Log() {
 
   const entrySetsRef = useRef({})
 
+  const todayDone = useLiveQuery(async () => {
+    const workouts = await db.workouts.where('date').equals(date).toArray()
+    if (!workouts.length) return null
+    const workoutIds = workouts.map(w => w.id)
+    const allSets = await db.sets.where('workoutId').anyOf(workoutIds).toArray()
+    if (!allSets.length) return null
+    const exerciseIds = [...new Set(allSets.map(s => s.exerciseId))]
+    const exList = await db.exercises.where('id').anyOf(exerciseIds).toArray()
+    const exMap = Object.fromEntries(exList.map(e => [e.id, e]))
+    const totalVolume = allSets.reduce((sum, s) => sum + s.weight * s.reps, 0)
+    const exerciseNames = exerciseIds.map(eid => exMap[eid]?.name).filter(Boolean)
+    return { totalVolume, exerciseNames }
+  }, [date])
+
   const grouped = exercises?.reduce((acc, e) => {
     const cat = e.category ?? 'Other'
     if (!acc[cat]) acc[cat] = []
@@ -338,22 +353,22 @@ export default function Log() {
       historicalMax[entry.exerciseId] = prev.length ? Math.max(...prev.map(s => s.weight)) : 0
     }
 
-    const workoutId = await db.workouts.add({ date, note })
-
-    const allSets = entries.flatMap(entry => {
-      const sets = entrySetsRef.current[entry.key] ?? entry.sets
-      return sets
-        .filter(s => s.weight !== '' && s.weight !== null)
-        .map(s => ({
-          workoutId,
-          exerciseId: entry.exerciseId,
-          setNumber: s.setNumber,
-          weight: parseFloat(s.weight) || 0,
-          reps: parseInt(s.reps) || DEFAULT_REPS,
-        }))
+    await db.transaction('rw', db.workouts, db.sets, async () => {
+      const workoutId = await db.workouts.add({ date, note })
+      const allSets = entries.flatMap(entry => {
+        const sets = entrySetsRef.current[entry.key] ?? entry.sets
+        return sets
+          .filter(s => s.weight !== '' && s.weight !== null && parseFloat(s.weight) > 0)
+          .map(s => ({
+            workoutId,
+            exerciseId: entry.exerciseId,
+            setNumber: s.setNumber,
+            weight: parseFloat(s.weight),
+            reps: parseInt(s.reps) || DEFAULT_REPS,
+          }))
+      })
+      if (allSets.length > 0) await db.sets.bulkAdd(allSets)
     })
-
-    await db.sets.bulkAdd(allSets)
 
     // Detect new PRs
     const newPRs = []
@@ -368,9 +383,12 @@ export default function Log() {
 
     if (newPRs.length > 0) {
       haptic.pr()
+      newPRs.forEach(pr => logger.info('pr', 'New PR detected', { exercise: pr.name, weight: pr.weight }))
     } else {
       haptic.success()
     }
+
+    logger.info('workout', 'Workout saved', { date, exerciseCount: entries.length, newPRs: newPRs.length })
 
     setSaving(false)
     setSaved(true)
@@ -470,6 +488,34 @@ export default function Log() {
           />
         </div>
       </div>
+
+      {/* Today's logged exercises */}
+      {todayDone && (
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#3f3f46' }}>
+            Done today
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-bold" style={{ color: '#f8f8ff' }}>
+                {Math.round(todayDone.totalVolume).toLocaleString('en-US')} kg lifted
+              </div>
+              <div className="text-xs mt-1 truncate" style={{ color: '#52525b' }}>
+                {todayDone.exerciseNames.join(', ')}
+              </div>
+            </div>
+            <div
+              className="text-sm font-bold px-3 py-1.5 rounded-xl shrink-0"
+              style={{ background: 'rgba(139,92,246,0.12)', color: '#a78bfa' }}
+            >
+              {todayDone.exerciseNames.length} exercise{todayDone.exerciseNames.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Exercise blocks */}
       {entries.map(entry => (
@@ -602,32 +648,10 @@ export default function Log() {
           position: 'sticky',
           bottom: 0,
           paddingTop: 16,
-          paddingBottom: 8,
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
           background: 'linear-gradient(to top, #0b0b11 80%, transparent)',
           marginTop: 8,
         }}>
-          <textarea
-            placeholder="Note..."
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            rows={2}
-            className="w-full rounded-2xl px-4 py-3 text-sm outline-none resize-none transition-all"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              color: '#f8f8ff',
-              marginBottom: 8,
-            }}
-            onFocus={e => {
-              e.target.style.boxShadow = '0 0 0 2px rgba(139,92,246,0.3)'
-              e.target.style.borderColor = 'rgba(139,92,246,0.4)'
-            }}
-            onBlur={e => {
-              e.target.style.boxShadow = 'none'
-              e.target.style.borderColor = 'rgba(255,255,255,0.07)'
-            }}
-          />
-
           <button
             onClick={handleSave}
             disabled={saving}

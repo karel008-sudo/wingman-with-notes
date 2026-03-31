@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import Dashboard from './pages/Dashboard'
 import Log from './pages/Log'
 import History from './pages/History'
 import Reports from './pages/Reports'
 import Exercises from './pages/Exercises'
 import AbsolutePRs from './pages/AbsolutePRs'
+import Consistency from './pages/Consistency'
+import LogViewer from './pages/LogViewer'
 
 const TABS = [
   {
@@ -75,7 +78,9 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState('dashboard')
+  const [subView, setSubView] = useState(null)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  useRegisterSW()
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -100,7 +105,7 @@ export default function App() {
       <div className="flex-1 overflow-y-auto overscroll-contain">
         {/* Safe-area spacer — pushes content below the Dynamic Island / notch / status bar */}
         <div style={{ height: 'env(safe-area-inset-top, 44px)', minHeight: 44 }} />
-        {!isOnline && (
+{!isOnline && (
           <div className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
             style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderBottom: '1px solid rgba(245,158,11,0.2)' }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
@@ -115,13 +120,24 @@ export default function App() {
             Offline — changes saved locally
           </div>
         )}
-        {tab === 'dashboard' && <Dashboard onStartWorkout={() => setTab('log')} />}
+        {tab === 'dashboard' && <Dashboard onStartWorkout={() => setTab('log')} onOpenConsistency={() => setSubView('consistency')} />}
         {tab === 'log' && <Log />}
         {tab === 'history' && <History />}
         {tab === 'reports' && <Reports />}
         {tab === 'absolute-prs' && <AbsolutePRs />}
-        {tab === 'exercises' && <Exercises />}
+        {tab === 'exercises' && <Exercises onOpenLogs={() => setSubView('logs')} />}
       </div>
+
+      {subView === 'consistency' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: '#0b0b11' }}>
+          <Consistency onBack={() => setSubView(null)} />
+        </div>
+      )}
+      {subView === 'logs' && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: '#0b0b11' }}>
+          <LogViewer onBack={() => setSubView(null)} />
+        </div>
+      )}
 
       <nav
         className="flex"
@@ -130,7 +146,7 @@ export default function App() {
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         {TABS.map(t => {
@@ -139,7 +155,7 @@ export default function App() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors"
+              className="flex-1 flex flex-col items-center gap-0.5 py-1.5 transition-colors"
               style={{ color: active ? '#8b5cf6' : '#52525b', minWidth: 0 }}
             >
               {t.icon}
