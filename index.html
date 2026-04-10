@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/wingman/favicon.svg" />
+    <link rel="apple-touch-icon" href="/wingman/pwa-192.png" sizes="192x192" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Wingman" />
+    <meta name="theme-color" content="#0f0f16" />
+    <title>Wingman</title>
+
+    <script type="module" crossorigin src="/wingman/assets/index-DDYbHzTL.js"></script>
+    <link rel="stylesheet" crossorigin href="/wingman/assets/index-DJ5ATe67.css">
+  <link rel="manifest" href="/wingman/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+    <!-- Set --app-height synchronously before React mounts.
+         window.innerHeight is the only reliable source of truth for the
+         actual visual viewport height on iOS Safari PWA standalone mode.
+         All CSS viewport units (dvh/svh/vh) can be miscalculated. -->
+    <script>
+      (function () {
+        function setH() {
+          document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+        }
+        setH();
+        window.addEventListener('resize', setH);
+      })();
+    </script>
+  </body>
+</html>
